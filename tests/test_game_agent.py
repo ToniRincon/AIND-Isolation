@@ -22,7 +22,7 @@ class IsolationTest(unittest.TestCase):
 
     def test_example(self):
         # TODO: All methods must start with "test_"
-        self.fail("Hello, World!")
+        self.assertFalse(True)
 
 
 if __name__ == '__main__':

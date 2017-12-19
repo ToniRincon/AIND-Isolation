@@ -34,8 +34,15 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_moves = len(game.get_legal_moves(player))
+    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    return float(own_moves - opp_moves)
 
 
 def custom_score_2(game, player):
@@ -169,6 +176,34 @@ class MinimaxPlayer(IsolationPlayer):
 
         # Return the best move from the last completed search iteration
         return best_move
+        
+    def min_value(self, game, depth):
+    
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+            
+        if depth == 0:
+            return self.score(game,self)
+        
+        moves = game.get_legal_moves()
+        if not moves:
+            return self.score(game,self)
+        
+        return min(self.max_value(game.forecast_move(m),depth-1) for m in moves)
+
+    def max_value(self, game, depth):
+   
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+        
+        if depth == 0:
+            return self.score(game,self)
+        
+        moves = game.get_legal_moves()
+        if not moves:
+            return self.score(game,self)
+        
+        return max(self.min_value(game.forecast_move(m),depth-1) for m in moves)
 
     def minimax(self, game, depth):
         """Implement depth-limited minimax search algorithm as described in
@@ -211,9 +246,13 @@ class MinimaxPlayer(IsolationPlayer):
         """
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
+        
+        moves = game.get_legal_moves()
+        if not moves:
+            return (-1,1)
+        return max(moves, key=lambda m: self.min_value(game.forecast_move(m),depth-1))
+        
 
-        # TODO: finish this function!
-        raise NotImplementedError
 
 
 class AlphaBetaPlayer(IsolationPlayer):
