@@ -257,7 +257,8 @@ if __name__ == "__main__":
     from isolation import Board
 
     # create an isolation board (by default 7x7)
-    player1 = MinimaxPlayer()
+    #player1 = MinimaxPlayer()
+    player1 = RandomPlayer()
     player2 = GreedyPlayer()
     game = Board(player1, player2)
 
