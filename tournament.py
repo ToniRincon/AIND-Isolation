@@ -23,7 +23,7 @@ from sample_players import (RandomPlayer, open_move_score,
 from game_agent import (MinimaxPlayer, AlphaBetaPlayer, custom_score,
                         custom_score_2, custom_score_3)
 
-NUM_MATCHES = 5  # number of matches against each opponent
+NUM_MATCHES = 10  # number of matches against each opponent
 TIME_LIMIT = 150  # number of milliseconds before timeout
 
 DESCRIPTION = """
@@ -48,8 +48,8 @@ def play_round(cpu_agent, test_agents, win_counts, num_matches):
     forfeit_count = 0
     for _ in range(num_matches):
 
-        games = sum([[Board(cpu_agent.player, agent.player),
-                      Board(agent.player, cpu_agent.player)]
+        games = sum([[Board(cpu_agent.player, agent.player,width=7, height=7),
+                      Board(agent.player, cpu_agent.player,width=7, height=7)]
                     for agent in test_agents], [])
 
         # initialize all games with a random move and response
