@@ -48,8 +48,8 @@ def play_round(cpu_agent, test_agents, win_counts, num_matches):
     forfeit_count = 0
     for _ in range(num_matches):
 
-        games = sum([[Board(cpu_agent.player, agent.player,width=7, height=7),
-                      Board(agent.player, cpu_agent.player,width=7, height=7)]
+        games = sum([[Board(cpu_agent.player, agent.player,width=9, height=9),
+                      Board(agent.player, cpu_agent.player,width=9, height=9)]
                     for agent in test_agents], [])
 
         # initialize all games with a random move and response

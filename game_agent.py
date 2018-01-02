@@ -9,51 +9,34 @@ def board_empy(game):
     total_spaces = game.width * game.height
     return blank_spaces/total_spaces * 100
        
-def in_wall(game,player,w):
+def in_wall(game,player):
     walls = set()
     walls.update([(0, i) for i in range(game.width)])
     walls.update([(i, 0) for i in range(game.height)])
     walls.update([(game.width - 1, i) for i in range(game.width)])
     walls.update([(i, game.height - 1) for i in range(game.height)])
     
-    own_moves = game.get_legal_moves(player)
-    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    moves = game.get_legal_moves(player)
     
-    own_score = 0
-    opp_score = 0
-       
-    for m in own_moves:
-        if m in walls:
-            own_score -= w
-        else:
-            own_score += w
-    for m in opp_moves:
-        if m in walls:
-            opp_score -= w
-        else:
-            opp_score +=w
-    return own_score-opp_score
+    moves_in_wall = 0
     
-def in_corner(game,player,w):
+    for m in moves:
+        if m in walls:
+            moves_in_wall += 1
+
+    return moves_in_wall
+    
+def in_corner(game,player):
     corners = set([(0,0),(0,game.width-1),(game.height-1,0),(game.height-1,game.width-1)])
        
-    own_moves = game.get_legal_moves(player)
-    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    moves = game.get_legal_moves(player)
     
-    own_score = 0
-    opp_score = 0
+    moves_in_corner = 0
         
-    for m in own_moves:
+    for m in moves:
         if m in corners:
-            own_score -= w
-        else:
-            own_score += w
-    for m in opp_moves:
-        if m in corners:
-            opp_score -= w
-        else:
-            opp_score +=w
-    return own_score-opp_score
+            moves_in_corner += 1
+    return moves_in_corner
     
 
 class SearchTimeout(Exception):
@@ -118,7 +101,6 @@ def open_move_score(game, player):
 
     return float(len(game.get_legal_moves(player)))
 
-
 def improved_score(game, player, w=1):
     """The "Improved" evaluation function discussed in lecture that outputs a
     score equal to the difference in the number of moves available to the
@@ -149,7 +131,6 @@ def improved_score(game, player, w=1):
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
     return float(own_moves - w*opp_moves)
-
 
 def center_score(game, player):
     """Outputs a score equal to square of the distance from the center of the
@@ -182,8 +163,7 @@ def center_score(game, player):
     w, h = game.width / 2., game.height / 2.
     y, x = game.get_player_location(player)
     return float((h - y)**2 + (w - x)**2)
-
-    
+   
 def custom_score(game, player):
     """Calculate the heuristic value of a game state from the point of view
     of the given player.
@@ -206,10 +186,28 @@ def custom_score(game, player):
     Returns
     -------
     float
-        The heuristic value of the current game state to the specified player.
+        The heuristic value of the current game state to the specified player prioritizing moves in center
     """
     
-    return improved_score(game,player,1.05)
+    
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+        
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    
+    score_moves = float(len(own_moves)-1.2*len(opp_moves))
+    
+    w, h = game.width / 2., game.height / 2.
+    y, x = game.get_player_location(player)
+    score_center = float((h - y)**2 + (w - x)**2)
+    
+    score = score_moves+0.5*score_center
+    
+    return score
 
 
 def custom_score_2(game, player):
@@ -232,9 +230,15 @@ def custom_score_2(game, player):
     Returns
     -------
     float
-        The heuristic value of the current game state to the specified player.
+        The heuristic value of the current game state to the specified player penalizing moves in corner or walls
     """
-    return improved_score(game,player,1.05) + in_wall(game,player,0.25) + in_corner(game,player,0.25)
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+        
+    return improved_score(game,player,1.05) - 0.25*in_corner(game,player) - 0.25*in_wall(game,player)
 
 
 def custom_score_3(game, player):
@@ -257,9 +261,18 @@ def custom_score_3(game, player):
     Returns
     -------
     float
-        The heuristic value of the current game state to the specified player.
+        The heuristic value of the current game state to the specified player ignorig moves than can be used by the opponent
     """
-    return improved_score(game,player,1.05) + in_wall(game,player,0.5) + in_corner(game,player,0.5)
+    
+    own_moves = game.get_legal_moves(player)
+    opp_moves = game.get_legal_moves(game.get_opponent(player))
+    
+    if player == game._inactive_player and not opp_moves:
+        return float('+inf')
+    if player == game._active_player and not own_moves:
+        return float('-inf')
+    
+    return float(len(set(own_moves)-set(opp_moves)) - len(opp_moves))
 
 
 class IsolationPlayer:
@@ -462,11 +475,21 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         # Initialize the best move so that this function returns something
         # in case the search fails due to timeout
-        
         moves = game.get_legal_moves()
         if not moves:
             return (-1,-1)
-        best_move = moves[0]       
+        best_move = moves[0]
+        if game.move_count == 0:
+            best_move = (game.width//2,game.height//2)
+            return best_move
+        if game.move_count == 1:
+            best_move = (game.width//2,game.height//2)
+            if best_move in moves:
+                return best_move
+            else:
+                best_move = (game.width//2,game.height//2-1)
+                return best_move
+        #print('get_move','count:',game.move_count,'init:',best_move)
 
         try:
             # The try/except block will automatically catch the exception
@@ -477,9 +500,11 @@ class AlphaBetaPlayer(IsolationPlayer):
                 depth+=1
                 
         except SearchTimeout:
+            #print('get_move','count:',game.move_count,'depth:',depth,'timeout')
             pass  # Handle any actions required after timeout as needed
             
         # Return the best move from the last completed search iteration
+        #print('get_move','count:',game.move_count,'best_move:',best_move)
         return best_move
         
     def alphabeta_v1(self, game, depth, alpha=float("-inf"), beta=float("inf")):
@@ -585,21 +610,24 @@ class AlphaBetaPlayer(IsolationPlayer):
     
         if self.time_left() < self.TIMER_THRESHOLD:
                 raise SearchTimeout()
-        #print(game.move_count,depth)
+        
+        #main, return movement
         if maximizer is None:
             moves = game.get_legal_moves()
             if not moves:
                 return (-1,-1)
-            _,m =  self.alphabeta(game,depth,alpha,beta,maximizer=True)
+            v,m =  self.alphabeta(game,depth,alpha,beta,maximizer=True)
+            #print(game.move_count,len(moves),depth,m,v)
             return m
         
+ 
         if maximizer:
-            #print('minimax',minmax)
+            # max, return score
             moves = game.get_legal_moves()
             if depth == 0 or not moves:
                 return self.score(game,self),(-1,-1)
             
-            m_best = moves[0]            
+            m_best = moves[0]           
             v_best = float("-inf")
             
             for m in moves:
@@ -613,7 +641,7 @@ class AlphaBetaPlayer(IsolationPlayer):
             return v_best,m_best
                 
         else:
-            #print('minimax',minmax)
+            # min, return score
             if self.time_left() < self.TIMER_THRESHOLD:
                 raise SearchTimeout()
         
