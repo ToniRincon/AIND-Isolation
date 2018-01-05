@@ -5,11 +5,17 @@ and include the results in your report.
 import random
 
 def board_empy(game):
+    '''
+    return the percentage of blank spaces in the board
+    '''
     blank_spaces = len(game.get_blank_spaces())
     total_spaces = game.width * game.height
-    return blank_spaces/total_spaces * 100
+    return blank_spaces/total_spaces
        
 def in_wall(game,player):
+    '''
+    return the number of available movement in walls
+    '''
     walls = set()
     walls.update([(0, i) for i in range(game.width)])
     walls.update([(i, 0) for i in range(game.height)])
@@ -27,6 +33,9 @@ def in_wall(game,player):
     return moves_in_wall
     
 def in_corner(game,player):
+    '''
+    return the number of available movement in corners
+    '''
     corners = set([(0,0),(0,game.width-1),(game.height-1,0),(game.height-1,game.width-1)])
        
     moves = game.get_legal_moves(player)
@@ -199,13 +208,16 @@ def custom_score(game, player):
     own_moves = game.get_legal_moves(player)
     opp_moves = game.get_legal_moves(game.get_opponent(player))
     
+    # differece of available moves, the reducer 1.2 prioritizes reducing the movility of the opponent
     score_moves = float(len(own_moves)-1.2*len(opp_moves))
     
-    w, h = game.width / 2., game.height / 2.
+    # distance to the center
+    w, h = game.width // 2., game.height // 2.
     y, x = game.get_player_location(player)
-    score_center = float((h - y)**2 + (w - x)**2)
+    score_center = float(abs(h - y) + abs(w - x))
     
-    score = score_moves+0.5*score_center
+    # combination of available moves and penality of distance to center
+    score = score_moves+w/(score_center+1)
     
     return score
 
@@ -238,7 +250,12 @@ def custom_score_2(game, player):
     if game.is_winner(player):
         return float("inf")
         
-    return improved_score(game,player,1.05) - 0.25*in_corner(game,player) - 0.25*in_wall(game,player)
+    empty =  board_empy(game)
+    if empty > 0.5:
+        return improved_score(game,player,1.2) - 0.25*in_corner(game,player) - 0.25*in_wall(game,player)
+    else:
+        # at the end of the game increase penality to movement in border or corners
+        return improved_score(game,player,1.2) - 0.5*in_corner(game,player) - 0.5*in_wall(game,player)
 
 
 def custom_score_3(game, player):
@@ -507,7 +524,7 @@ class AlphaBetaPlayer(IsolationPlayer):
         #print('get_move','count:',game.move_count,'best_move:',best_move)
         return best_move
         
-    def alphabeta_v1(self, game, depth, alpha=float("-inf"), beta=float("inf")):
+    def alphabeta_with_helpers(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
         described in the lectures.
 
@@ -620,7 +637,6 @@ class AlphaBetaPlayer(IsolationPlayer):
             #print(game.move_count,len(moves),depth,m,v)
             return m
         
- 
         if maximizer:
             # max, return score
             moves = game.get_legal_moves()
@@ -661,41 +677,4 @@ class AlphaBetaPlayer(IsolationPlayer):
                     return v_best,m_best
                 beta = min(beta,v)
             return v_best,m_best
-        
-'''        
-        def max_value(game, depth, alpha, beta):
             
-            if self.time_left() < self.TIMER_THRESHOLD:
-                raise SearchTimeout()
-            
-            moves = game.get_legal_moves()
-            
-            if depth == 0 or not moves:
-                return self.score(game,self)
-            
-            v = float("-inf")
-            for m in moves:
-                v = max(v,min_value(game.forecast_move(m),depth-1,alpha,beta))
-                if v>=beta:
-                    return v
-                alpha = max(alpha,v)
-            return v
-        
-        if self.time_left() < self.TIMER_THRESHOLD:
-            raise SearchTimeout()
-        
-        v_best=float('-inf')
-        moves = game.get_legal_moves()
-        if not moves:
-            return (-1,-1)
-        m_best = moves[0]
-        
-        for m in moves:
-            v = min_value(game.forecast_move(m),depth-1,alpha,beta)
-            if v>v_best:
-                v_best=v
-                m_best=m
-            alpha = max(alpha,v_best)
-        #print ('move:',game.move_count,'depth:',depth,'moves:',len(moves),'v_best:',v_best,'m_best:',m_best)
-        return m_best
-'''
